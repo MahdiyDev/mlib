@@ -1,3 +1,3 @@
-# List implementation in C programming language.
+# Dynamic array implementation in C programming language.
 
 
