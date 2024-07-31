@@ -1,5 +1,7 @@
 #include <stdio.h>
-#include "../async.h"
+
+#define ASYNC_IMPLEMENTATION
+#include "../../async.h"
 
 void print_hello(Task *task, resolve_func res, reject_func rej)
 {
