@@ -11,12 +11,12 @@ int main()
 
     string_builder* sb = sb_init("String builder:\n");
 
-    sb_str_add(sb, "    ");
-    sb_str_add(sb, "capacity: ");
-    sb_sprintf(sb, "%d\n", sb->capacity);
-    sb_str_add(sb, "    ");
-    sb_str_add(sb, "count: ");
-    sb_sprintf(sb, "%d\n", sb->count);
+    sb_add_str(sb, "    ");
+    sb_add_str(sb, "capacity: ");
+    sb_add_str(sb, sb_sprintf("%d\n", sb->capacity));
+    sb_add_str(sb, "    ");
+    sb_add_str(sb, "count: ");
+    sb_add_str(sb, sb_sprintf("%d\n", sb->count));
 
     sv = sb_to_sv(sb);
 
