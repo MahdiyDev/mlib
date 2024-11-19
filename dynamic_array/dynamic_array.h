@@ -20,6 +20,8 @@
 	#define DA_FREE free
 #endif
 
+#define arr_count(arr) (sizeof(arr) / sizeof(typeof(arr[0])))
+
 #define da_init_with_capacity(da, cap)                                                          \
     do {                                                                                        \
         typeof(da) _new_da = (typeof(da))DA_MALLOC(sizeof(typeof(*da)));                        \

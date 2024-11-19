@@ -3,7 +3,9 @@
 #include "../dynamic_array.h"
 
 typedef struct StringBuilder {
-    DefineDa(int);
+    char* items;
+    size_t capacity;
+    size_t count;
 } ArrayOfNumbers;
 
 int main()
@@ -20,7 +22,7 @@ int main()
 
     da_append_many(num_array, numbers, 3);
 
-    for (int i = 0; i < num_array->length; i++) {
+    for (int i = 0; i < num_array->count; i++) {
         printf("num_array[%d]: %d\n", i, num_array->items[i]);
     }
 
@@ -29,7 +31,7 @@ int main()
 
     da_delete_range(num_array, 0, 2);
 
-    for (int i = 0; i < num_array->length; i++) {
+    for (int i = 0; i < num_array->count; i++) {
         printf("after delete num_array[%d]: %d\n", i, num_array->items[i]);
     }
 
@@ -37,7 +39,7 @@ int main()
 
     da_append(num_array, 10);
 
-    for (int i = 0; i < num_array->length; i++) {
+    for (int i = 0; i < num_array->count; i++) {
         printf("after clear num_array[%d]: %d\n", i, num_array->items[i]);
     }
 
