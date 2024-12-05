@@ -45,21 +45,22 @@ bool sv_in_cstr(string_view a, const char* cstr);
 bool sv_in_c(string_view a, const char c);
 #define sv_in_carr(sv, arr) sv_in(sv, arr, arr_count(arr))
 
-string_builder* sb_init(const char* src);
+string_builder* sb_init(const char* cstr);
 void sb_free(string_builder* sb);
 
 void sb_add(string_builder* sb, string_view sv);
 
-void sb_add_str(string_builder* sb, const char* src);
-void sb_add_first_str(string_builder* sb, const char* src);
-void sb_delete_range_str(string_builder* sb, int start, int end);
+void sb_add_cstr(string_builder* sb, const char* cstr);
+void sb_add_first_cstr(string_builder* sb, const char* cstr);
+void sb_delete_range_cstr(string_builder* sb, int start, int end);
 
 void sb_add_c(string_builder* sb, const char c);
 void sb_add_first_c(string_builder* sb, const char c);
 void sb_delete_c(string_builder* sb, int index);
 
+void sb_add_f(string_builder* sb, const char *format, ...);
+
 void sb_clear(string_builder* sb);
-char* sb_sprintf(const char *format, ...);
 
 #ifdef STRING_IMPLEMENTATION
 #include <stdarg.h>
@@ -165,18 +166,16 @@ bool sv_end_with(string_view sv, const char *cstr)
 
 bool sv_isnumeric(string_view sv)
 {
-	if (!isdigit(sv.data[0])) return false;
-	for (int i = 0; i < sv.count; i++) {
-		if (isdigit(sv.data[i])) return true;
-	}
-	return false;
+	return isdigit(sv.data[0]) != 0;
 }
 
 size_t sv_to_digit(string_view sv)
 {
 	size_t value = 0;
+	int n;
 	for (int i = 0; i < sv.count; i++) {
-		int n = sv.data[i] - '0';
+		if (isdigit(sv.data[i]) == 0) break;
+		n = sv.data[i] - '0';
 		if (n > 9) return value;
 		if (i == 0) {
 			value = value + n;
@@ -260,18 +259,22 @@ bool sv_in_c(string_view a, const char c)
 
 string_view sb_to_sv(string_builder* sb)
 {
-    sb_add_c(sb, '\0');
     return sv_from_parts((sb)->items, (sb)->count);
 }
 
-string_builder* sb_init(const char* src)
+string_builder* sb_init(const char* cstr)
 {
     string_builder* sb;
     da_init(sb);
-    if (src != NULL) {
-        sb_add_str(sb, src);
+    if (cstr != NULL) {
+        sb_add_cstr(sb, cstr);
     }
     return sb;
+}
+
+void sb_free(string_builder* sb)
+{
+    da_free(sb);
 }
 
 void sb_add(string_builder* sb, string_view sv)
@@ -279,17 +282,17 @@ void sb_add(string_builder* sb, string_view sv)
     da_append_many(sb, sv.data, sv.count);
 }
 
-void sb_add_str(string_builder* sb, const char* src)
+void sb_add_cstr(string_builder* sb, const char* cstr)
 {
-    da_append_many(sb, src, strlen(src));
+    da_append_many(sb, cstr, strlen(cstr));
 }
 
-void sb_add_first_str(string_builder* sb, const char* src)
+void sb_add_first_cstr(string_builder* sb, const char* cstr)
 {
-    da_prepend_many(sb, src, strlen(src));
+    da_prepend_many(sb, cstr, strlen(cstr));
 }
 
-void sb_delete_range_str(string_builder* sb, int start_index, int end_index)
+void sb_delete_range_cstr(string_builder* sb, int start_index, int end_index)
 {
     da_delete_range(sb, start_index, end_index);
 }
@@ -314,12 +317,7 @@ void sb_delete_c(string_builder* sb, int index)
     da_delete(sb, index);
 }
 
-void sb_free(string_builder* sb)
-{
-    da_free(sb);
-}
-
-char* sb_sprintf(const char *format, ...)
+void sb_add_f(string_builder* sb, const char *format, ...)
 {
     va_list args;
     va_start(args, format);
@@ -334,7 +332,8 @@ char* sb_sprintf(const char *format, ...)
     vsnprintf(temp, n + 1, format, args);
     va_end(args);
 
-    return temp;
+	sb_add_cstr(sb, temp);
+	free(temp);
 }
 
 #endif // STRING_IMPLEMENTATION

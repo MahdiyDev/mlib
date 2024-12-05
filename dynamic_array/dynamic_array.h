@@ -25,7 +25,7 @@
 #define da_init_with_capacity(da, cap)                                                          \
     do {                                                                                        \
         typeof(da) _new_da = (typeof(da))DA_MALLOC(sizeof(typeof(*da)));                        \
-        DA_ASSERT(_new_da != NULL && "Failed to allocate memory");                                        \
+        DA_ASSERT(_new_da != NULL && "Failed to allocate memory");                              \
         da = _new_da;                                                                           \
         (da)->capacity = cap;                                                                   \
         if (cap > 0) {                                                                          \
@@ -42,6 +42,7 @@
             DA_FREE((da)->items);  \
         }                          \
         DA_FREE(da);               \
+        da = NULL;                 \
     } while (0)
 
 // Append an item to a dynamic array
@@ -50,7 +51,7 @@
         if ((da)->count >= (da)->capacity) {                                                                   \
             (da)->capacity = (da)->capacity * 2;                                                               \
             (da)->items = (typeof((da)->items))DA_REALLOC((da)->items, (da)->capacity * sizeof(*(da)->items)); \
-            DA_ASSERT((da)->items != NULL && "Failed to allocate memory");                                               \
+            DA_ASSERT((da)->items != NULL && "Failed to allocate memory");                                     \
         }                                                                                                      \
         (da)->items[(da)->count++] = (item);                                                                   \
     } while (0)
@@ -65,7 +66,7 @@
                 (da)->capacity *= 2;                                                                           \
             }                                                                                                  \
             (da)->items = (typeof((da)->items))DA_REALLOC((da)->items, (da)->capacity * sizeof(*(da)->items)); \
-            DA_ASSERT((da)->items != NULL && "Failed to allocate memory");                                               \
+            DA_ASSERT((da)->items != NULL && "Failed to allocate memory");                                     \
         }                                                                                                      \
         memcpy((da)->items + (da)->count, (new_items), (new_items_count) * sizeof(*(da)->items));              \
         (da)->count += (new_items_count);                                                                      \
@@ -76,7 +77,7 @@
         if ((da)->count >= (da)->capacity) {                                                                        \
             (da)->capacity = (da)->capacity * 2;                                                                    \
             (da)->items = (typeof((da)->items))realloc((da)->items, (da)->capacity * sizeof(*(da)->items));         \
-            DA_ASSERT((da)->items != NULL && "Failed to allocate memory");                                                    \
+            DA_ASSERT((da)->items != NULL && "Failed to allocate memory");                                          \
         }                                                                                                           \
         memmove(&(da)->items[1], &(da)->items[0], (da)->count * sizeof(*(da)->items));                              \
         (da)->items[0] = (item);                                                                                    \
@@ -93,7 +94,7 @@
                 (da)->capacity *= 2;                                                                           \
             }                                                                                                  \
             (da)->items = (typeof((da)->items))DA_REALLOC((da)->items, (da)->capacity * sizeof(*(da)->items)); \
-            DA_ASSERT((da)->items != NULL && "Failed to allocate memory");                                               \
+            DA_ASSERT((da)->items != NULL && "Failed to allocate memory");                                     \
         }                                                                                                      \
         memmove(&(da)->items[new_items_count], &(da)->items[0], (da)->count * sizeof(*(da)->items));           \
         memcpy(&(da)->items[0], (new_items), (new_items_count) * sizeof(*(da)->items));                        \
@@ -107,7 +108,7 @@
             (da)->count -= (end_index - start_index);                                                                           \
             (da)->capacity -= (end_index - start_index);                                                                        \
             memmove(&(da)->items[start_index], &(da)->items[end_index], ((da)->capacity - start_index) * sizeof(*(da)->items)); \
-            (da)->items = DA_REALLOC((da)->items, ((da)->capacity) * sizeof(*(da)->items));                                     \
+            (da)->items = (typeof((da)->items))DA_REALLOC((da)->items, ((da)->capacity) * sizeof(*(da)->items));                \
         }                                                                                                                       \
     } while (0)
 
@@ -117,7 +118,7 @@
             (da)->count--;                                                                                          \
             (da)->capacity--;                                                                                       \
             memmove(&(da)->items[index], &(da)->items[index + 1], ((da)->capacity - index) * sizeof(*(da)->items)); \
-            (da)->items = DA_REALLOC((da)->items, ((da)->capacity) * sizeof(*(da)->items));                         \
+            (da)->items = (typeof((da)->items))DA_REALLOC((da)->items, ((da)->capacity) * sizeof(*(da)->items));    \
         }                                                                                                           \
     } while (0)
 

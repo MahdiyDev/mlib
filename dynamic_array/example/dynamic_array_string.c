@@ -5,23 +5,23 @@
 
 int main()
 {
-    StringBuilder* sb = init_string("Hello World");
+    string_builder* sb = sb_init("Hello World");
 
-    c_add(sb, '\n');
+    sb_add_c(sb, '\n');
 
-    str_add(sb, "Hello mello shmello!");
+    sb_add_cstr(sb, "Hello mello shmello!");
 
-    str_delete_range(sb, 2, 3);
+    sb_delete_range_cstr(sb, 2, 3);
 
-    printf("The message: %.*s\n", sb->length, sb->items);
+    printf("The message: %.*s\n", (int)sb->count, sb->items);
 
-    str_clear(sb);
+    sb_clear(sb);
 
-    str_add(sb, "Some thing...");
+    sb_add_cstr(sb, "Some thing...");
 
-    printf("The message: %.*s\n", sb->length, sb->items);
+    printf("The message: %.*s\n", (int)sb->count, sb->items);
 
-    free_string(sb);
+    sb_free(sb);
 
     return 0;
 }
