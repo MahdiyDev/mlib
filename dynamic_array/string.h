@@ -15,6 +15,8 @@ typedef struct {
     size_t count;
 } string_view;
 
+#define sv_fmt(sv) (int)sv.count, sv.data
+
 string_view sv_from_cstr(const char* cstr);
 string_view sv_from_parts(const char* data, size_t count);
 
@@ -26,6 +28,7 @@ string_view sv_split_mul_cstr(string_view *sv, char* spliter, int n);
 string_view sv_split_mul_c(string_view *sv, char spliter, int n);
 
 bool sv_equal(string_view a, string_view b);
+bool sv_equal_c(string_view a, const char b);
 bool sv_equal_cstr(string_view a, const char* b);
 
 bool sv_start_with(string_view sv, const char* cstr);
@@ -138,6 +141,12 @@ bool sv_equal(string_view a, string_view b)
     } else {
         return memcmp(a.data, b.data, a.count) == 0;
     }
+}
+
+bool sv_equal_c(string_view a, const char b)
+{
+	if (a.count <= 0) return false;
+	return a.data[0] == b;
 }
 
 bool sv_equal_cstr(string_view a, const char* b)
