@@ -2,6 +2,9 @@
 
 #include <stddef.h>
 
+// Specific prime number for reduce collisions 
+#define HT_INITIAL_BASE_SIZE 53
+
 typedef struct {
     char* key;
     char* value;
@@ -55,14 +58,15 @@ size_t ht_hash(const char* s, const int a, const int m)
 //      h(k, i) = (h_1(k) + i * h_2(k)) mod m
 //      h_1(k) = k mod m
 //      h_2(k) = 1 + (k mod m')
-//      m = m - 1
+//      m' = m - 2
 //
-#define HT_PRIME 151
+#define HT_PRIME_1 31
+#define HT_PRIME_2 37
 
 size_t ht_get_hash(const char* s, const size_t num_buckets, const size_t attempt)
 {
-    size_t hash_a = ht_hash(s, HT_PRIME, num_buckets);
-    size_t hash_b = ht_hash(s, HT_PRIME, num_buckets - 1);
+    size_t hash_a = ht_hash(s, HT_PRIME_1, num_buckets);
+    size_t hash_b = ht_hash(s, HT_PRIME_2, num_buckets);
     return (hash_a + (attempt * (hash_b + 1))) % num_buckets;
 }
 
@@ -85,8 +89,6 @@ hash_table* ht_init_with_capacity(const int base_capacity)
     ht->items = calloc((size_t)ht->capacity, sizeof(ht_item*));
     return ht;
 }
-
-#define HT_INITIAL_BASE_SIZE 53
 
 hash_table* ht_init()
 {
@@ -142,7 +144,6 @@ char* ht_search(hash_table* ht, const char* key)
     while (item != NULL) {
         if (item != &HT_DELETED_ITEM) {
             if (strcmp(item->key, key) == 0) {
-                // printf("search count: %d for { %s : %s }\n", i, item->key, item->value);
                 return item->value;
             }
         }

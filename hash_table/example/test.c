@@ -61,15 +61,13 @@ int main()
                     val[3] = i;
                     val[4] = '\0';
                     char* val2 = ht_search(ht, key);
-                    if (strcmp(val, val2) == 0){ tr_val++;}
-                    else {printf("%s\n", val2);}
+                    if (strcmp(val, val2) == 0) tr_val++;
                 }
             }
         }
     }
     printf("--- value checking done! ---\n");
     printf("true value count: %d\n", tr_val);
-    
 
     ht_free(ht);
     return 0;
