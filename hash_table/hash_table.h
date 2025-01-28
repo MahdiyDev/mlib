@@ -2,13 +2,13 @@
 
 #include <stddef.h>
 
-// Specific prime number for reduce collisions 
-#define HT_INITIAL_BASE_SIZE 53
-
+#ifndef DEFINE_ITEM
 typedef struct {
     char* key;
-    char* value;
+    void* value;
+    int value_size;
 } ht_item;
+#endif // DEFINE_ITEM
 
 typedef struct {
     size_t capacity;
@@ -22,17 +22,22 @@ hash_table* ht_init();
 hash_table* ht_init_with_capacity(const int base_capacity);
 void ht_free(hash_table* ht);
 
-void  ht_insert(hash_table* ht, const char* key, const char* value);
-char* ht_search(hash_table* ht, const char* key);
+void  ht_insert(hash_table* ht, const char* key, void* value, int value_size);
+void* ht_search(hash_table* ht, const char* key);
 void  ht_delete(hash_table* ht, const char* key);
 
 #ifdef HT_IMPLEMENTATION
+#include <stddef.h>
+
 #include <stdio.h>
 #include <stdlib.h>
-#include <math.h>
 #include <string.h>
 #define PRIME_IMPLEMENTATION
 #include "prime.h"
+#include "hash_table.h"
+
+// Specific prime number for reduce collisions 
+#define HT_INITIAL_BASE_SIZE 53
 
 void ht_resize_up(hash_table* ht);
 void ht_resize_down(hash_table* ht);
@@ -41,14 +46,17 @@ void ht_resize_down(hash_table* ht);
 // Hash formula:
 //      h_b(<a_0, a_1, ..., a_(n-1)>) = (SUM_{j=0 to n-1} (a_j * b^j)) mod p
 //
-size_t ht_hash(const char* s, const int a, const int m)
-{
+size_t ht_hash(const char* s, const int a, const int m) {
     unsigned long hash = 0;
+    unsigned long a_pow = 1;  // a^0 = 1
     size_t len_s = strlen(s);
+
     for (size_t i = 0; i < len_s; i++) {
-        hash += pow(a, len_s - (i+1)) * s[i];
+        hash += s[len_s - (i + 1)] * a_pow;
         hash = hash % m;
+        a_pow = (a_pow * a) % m;  // Compute a^(i+1) % m
     }
+
     return hash;
 }
 
@@ -57,24 +65,43 @@ size_t ht_hash(const char* s, const int a, const int m)
 // Double hashing:
 //      h(k, i) = (h_1(k) + i * h_2(k)) mod m
 //      h_1(k) = k mod m
-//      h_2(k) = 1 + (k mod m')
-//      m' = m - 2
+//      h_2(k) = m' - (k % m')
 //
 #define HT_PRIME_1 31
 #define HT_PRIME_2 37
 
-size_t ht_get_hash(const char* s, const size_t num_buckets, const size_t attempt)
-{
+size_t ht_get_hash(const char* s, const size_t num_buckets, const size_t attempt) {
     size_t hash_a = ht_hash(s, HT_PRIME_1, num_buckets);
-    size_t hash_b = ht_hash(s, HT_PRIME_2, num_buckets);
-    return (hash_a + (attempt * (hash_b + 1))) % num_buckets;
+    size_t hash_b = ht_hash(s, HT_PRIME_2, num_buckets - 2); // m' = num_buckets - 2
+    hash_b = (num_buckets - 1) - hash_b;  // Ensure non-zero secondary hash
+    return (hash_a + attempt * hash_b) % num_buckets;
 }
 
-ht_item* ht_new_item(const char* k, const char* v)
-{
+
+ht_item* ht_new_item(const char* k, void* v, int value_size) {
     ht_item* i = malloc(sizeof(ht_item));
-    i->key = strdup(k);
-    i->value = strdup(v);
+    if (!i) {
+        perror("Failed to allocate memory for ht_item");
+        exit(EXIT_FAILURE);
+    }
+
+    i->key = strdup(k);  // Duplicate the key
+    if (!i->key) {
+        perror("Failed to allocate memory for key");
+        free(i);
+        exit(EXIT_FAILURE);
+    }
+
+    i->value = malloc(value_size);
+    if (!i->value) {
+        perror("Failed to allocate memory for value");
+        free(i->key);
+        free(i);
+        exit(EXIT_FAILURE);
+    }
+
+    memcpy(i->value, v, value_size);
+    i->value_size = value_size;
     return i;
 }
 
@@ -114,29 +141,29 @@ void ht_free(hash_table* ht)
     free(ht);
 }
 
-ht_item HT_DELETED_ITEM = {NULL, NULL};
+ht_item HT_DELETED_ITEM = {NULL, NULL, 0};
 
-void ht_insert(hash_table* ht, const char* key, const char* value)
+void ht_insert(hash_table* ht, const char* key, void* value, int value_size)
 {
     int load = ht->count * 100 / ht->capacity;
     if (load > 70) {
         ht_resize_up(ht);
     }
 
-    ht_item* item = ht_new_item(key, value);
-    int index = ht_get_hash(item->key, ht->capacity, 0);
+    ht_item* new_item = ht_new_item(key, value, value_size);
+    int index = ht_get_hash(new_item->key, ht->capacity, 0);
     ht_item* cur_item = ht->items[index];
     int i = 1;
     while (cur_item != NULL && cur_item != &HT_DELETED_ITEM) {
-        index = ht_get_hash(item->key, ht->capacity, i);
+        index = ht_get_hash(new_item->key, ht->capacity, i);
         cur_item = ht->items[index];
         i++;
     } 
-    ht->items[index] = item;
+    ht->items[index] = new_item;
     ht->count++;
 }
 
-char* ht_search(hash_table* ht, const char* key)
+void* ht_search(hash_table* ht, const char* key)
 {
     int index = ht_get_hash(key, ht->capacity, 0);
     ht_item* item = ht->items[index];
@@ -154,28 +181,27 @@ char* ht_search(hash_table* ht, const char* key)
     return NULL;
 }
 
-void ht_delete(hash_table* ht, const char* key)
-{
-    int load = ht->count * 100 / ht->capacity;
-    if (load < 10) {
-        ht_resize_down(ht);
-    }
-
+void ht_delete(hash_table* ht, const char* key) {
     int index = ht_get_hash(key, ht->capacity, 0);
     ht_item* item = ht->items[index];
     int i = 1;
+
     while (item != NULL) {
-        if (item != &HT_DELETED_ITEM) {
-            if (strcmp(item->key, key) == 0) {
-                ht_del_item(item);
-                ht->items[index] = &HT_DELETED_ITEM;
-            }
+        if (item != &HT_DELETED_ITEM && strcmp(item->key, key) == 0) {
+            ht_del_item(item);
+            ht->items[index] = &HT_DELETED_ITEM;
+            ht->count--;
+            break;
         }
         index = ht_get_hash(key, ht->capacity, i);
         item = ht->items[index];
         i++;
-    } 
-    ht->count--;
+    }
+
+    int load = ht->count * 100 / ht->capacity;
+    if (load < 10 && ht->capacity > HT_INITIAL_BASE_SIZE) {
+        ht_resize_down(ht);
+    }
 }
 
 void ht_resize(hash_table* ht, const int base_size)
@@ -187,7 +213,7 @@ void ht_resize(hash_table* ht, const int base_size)
     for (int i = 0; i < ht->capacity; i++) {
         ht_item* item = ht->items[i];
         if (item != NULL && item != &HT_DELETED_ITEM) {
-            ht_insert(new_ht, item->key, item->value);
+            ht_insert(new_ht, item->key, item->value, item->value_size);
         }
     }
 
