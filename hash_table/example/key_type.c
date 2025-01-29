@@ -8,30 +8,28 @@ struct vector { int x; int y; };
 #define ht_insert_vec_int(ht, key, value) do { \
     int _v = value; \
     struct vector _vk = key; \
-    char* _key = ht_to_char(&_vk, sizeof(_vk)); \
+    char _key[sizeof(struct vector)]; \
+    ht_to_char(_key, &_vk, sizeof(_vk)); \
     ht_insert(ht, _key, &_v, sizeof(int)); \
-    free(_key); \
 } while(0)
 #define ht_search_vec_int(ht, key) ({ \
     struct vector _vk = key; \
-    char* _key = ht_to_char(&_vk, sizeof(_vk)); \
-    int _r = *(int*)ht_search(ht, _key); \
-    free(_key); \
-    _r; /* return value */ \
+    char _key[sizeof(struct vector)]; \
+    ht_to_char(_key, &_vk, sizeof(_vk)); \
+    *(int*)ht_search(ht, _key); \
 })
 
 int main()
 {
     struct vector v = {12, 21};
-    char* r = ht_to_char(&v, sizeof(v));
+    char r[sizeof(struct vector)];
+    ht_to_char(r, &v, sizeof(v));
 
     printf("bin data: { ");
     for (int i = 0; i < sizeof(v); i++) {
         printf("%d ", r[i]);
     }
     printf("}\n");
-
-    free(r);
 
     hash_table* ht = ht_init();
 

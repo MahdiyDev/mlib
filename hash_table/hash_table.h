@@ -26,7 +26,7 @@ void  ht_insert(hash_table* ht, const char* key, void* value, int value_size);
 void* ht_search(hash_table* ht, const char* key);
 void  ht_delete(hash_table* ht, const char* key);
 
-char* ht_to_char(void* data, int data_size);
+void ht_to_char(char* cstr, void* data, int data_size);
 
 #ifdef HT_IMPLEMENTATION
 #include <stddef.h>
@@ -44,21 +44,14 @@ char* ht_to_char(void* data, int data_size);
 void ht_resize_up(hash_table* ht);
 void ht_resize_down(hash_table* ht);
 
-char* ht_to_char(void* data, int data_size)
+void ht_to_char(char* cstr, void* data, int data_size)
 {
     if (!data || data_size <= 0) {
-        return NULL; // Handle edge cases
-    }
-
-    char* cstr = (char*)malloc(data_size + 1);
-    if (!cstr) {
-        return NULL;
+        cstr = NULL;
     }
 
     memcpy(cstr, data, data_size);
-    cstr[data_size] = '\0';
-
-    return cstr;
+    cstr[data_size - 1] = '\0';
 }
 
 //
