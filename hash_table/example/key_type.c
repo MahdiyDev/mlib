@@ -5,19 +5,8 @@
 
 struct vector { int x; int y; };
 
-#define ht_insert_vec_int(ht, key, value) do { \
-    int _v = value; \
-    struct vector _vk = key; \
-    char _key[sizeof(struct vector)]; \
-    ht_to_char(_key, &_vk, sizeof(_vk)); \
-    ht_insert(ht, _key, &_v, sizeof(int)); \
-} while(0)
-#define ht_search_vec_int(ht, key) ({ \
-    struct vector _vk = key; \
-    char _key[sizeof(struct vector)]; \
-    ht_to_char(_key, &_vk, sizeof(_vk)); \
-    *(int*)ht_search(ht, _key); \
-})
+#define ht_insert_vec_int(ht, key, value) ht_insert_generic(ht, struct vector, key, int, value)
+#define ht_search_vec_int(ht, key) ht_search_generic(ht, struct vector, key, int)
 
 int main()
 {
@@ -42,9 +31,9 @@ int main()
     struct vector vec3 = {5, 3};
     ht_insert_vec_int(ht, vec3, 43);
 
-    printf("[1] %d\n", ht_search_vec_int(ht, vec1));
-    printf("[2] %d\n", ht_search_vec_int(ht, vec2));
-    printf("[3] %d\n", ht_search_vec_int(ht, vec3));
+    printf("[1] %d\n", *ht_search_vec_int(ht, vec1));
+    printf("[2] %d\n", *ht_search_vec_int(ht, vec2));
+    printf("[3] %d\n", *ht_search_vec_int(ht, vec3));
 
     ht_free(ht);
 }

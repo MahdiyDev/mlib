@@ -28,6 +28,26 @@ void  ht_delete(hash_table* ht, const char* key);
 
 void ht_to_char(char* cstr, void* data, int data_size);
 
+#define ht_insert_generic(ht, key_type, key, value_type, value) do { \
+    value_type _v = value; \
+    key_type _vk = key; \
+    char _key[sizeof(key_type)]; \
+    ht_to_char(_key, &_vk, sizeof(_vk)); \
+    ht_insert(ht, _key, &_v, sizeof(value_type)); \
+} while(0)
+#define ht_search_generic(ht, key_type, key, value_type) ({ \
+    key_type _vk = key; \
+    char _key[sizeof(key_type)]; \
+    ht_to_char(_key, &_vk, sizeof(_vk)); \
+    (value_type*)ht_search(ht, _key); \
+})
+#define ht_delete_generic(ht, key_type, key) { \
+    key_type _vk = key; \
+    char _key[sizeof(key_type)]; \
+    ht_to_char(_key, &_vk, sizeof(_vk)); \
+    ht_delete(ht, _key); \
+} while(0)
+
 #ifdef HT_IMPLEMENTATION
 #include <stddef.h>
 
@@ -144,19 +164,19 @@ void ht_del_item(ht_item* i)
     free(i);
 }
 
+ht_item HT_DELETED_ITEM = {NULL, NULL, 0};
+
 void ht_free(hash_table* ht)
 {
     for (int i = 0; i < ht->capacity; i++) {
         ht_item* item = ht->items[i];
-        if (item != NULL) {
+        if (item != NULL && item != &HT_DELETED_ITEM) {
             ht_del_item(item);
         }
     }
     free(ht->items);
     free(ht);
 }
-
-ht_item HT_DELETED_ITEM = {NULL, NULL, 0};
 
 void ht_insert(hash_table* ht, const char* key, void* value, int value_size)
 {
