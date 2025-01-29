@@ -26,20 +26,24 @@ void  ht_delete(hash_table* ht, const char* key);
 
 void ht_to_char(char* cstr, void* data, int data_size);
 
-#define ht_insert_generic(ht, key_type, key, value_type, value) do { \
+#define ht_insert_generic_value(ht, key, value_type, value) do { value_type _v = value; ht_insert(ht, key, &_v, sizeof(value_type)); } while(0)
+#define ht_search_generic_value(ht, key, value_type) (value_type*)ht_search(ht, key)
+#define ht_delete_generic_value(ht, key) do { ht_delete(ht, key); } while(0)
+
+#define ht_insert_generic_key(ht, key_type, key, value_type, value) do { \
     value_type _v = value; \
     key_type _vk = key; \
     char _key[sizeof(key_type)]; \
     ht_to_char(_key, &_vk, sizeof(_vk)); \
     ht_insert(ht, _key, &_v, sizeof(value_type)); \
 } while(0)
-#define ht_search_generic(ht, key_type, key, value_type) ({ \
+#define ht_search_generic_key(ht, key_type, key, value_type) ({ \
     key_type _vk = key; \
     char _key[sizeof(key_type)]; \
     ht_to_char(_key, &_vk, sizeof(_vk)); \
     (value_type*)ht_search(ht, _key); \
 })
-#define ht_delete_generic(ht, key_type, key) { \
+#define ht_delete_generic_key(ht, key_type, key) { \
     key_type _vk = key; \
     char _key[sizeof(key_type)]; \
     ht_to_char(_key, &_vk, sizeof(_vk)); \

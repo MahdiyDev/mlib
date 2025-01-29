@@ -2,8 +2,9 @@
 #define HT_IMPLEMENTATION
 #include "../hash_table.h"
 
-#define ht_insert_cstr(ht, key, value) do { char* _v = value; ht_insert(ht, key, &_v, sizeof(char*)); } while(0)
-#define ht_search_cstr(ht, key) *(char**)ht_search(ht, key)
+#define ht_insert_cstr(ht, key, value) ht_insert_generic_value(ht, key, char*, value)
+#define ht_search_cstr(ht, key)        ht_search_generic_value(ht, key, char*)
+#define ht_delete_cstr(ht, key)        ht_delete_generic_value(ht, key)
 
 int main()
 {
@@ -39,10 +40,10 @@ int main()
     ht_insert_cstr(ht, "snake", "snake snakes");
     ht_insert_cstr(ht, "man", "I like money!");
 
-    printf("cat: %s\n", ht_search_cstr(ht, "cat"));
-    printf("dog: %s\n", ht_search_cstr(ht, "dog"));
-    printf("snake: %s\n", ht_search_cstr(ht, "snake"));
-    printf("man: %s\n", ht_search_cstr(ht, "man"));
+    printf("cat: %s\n", *ht_search_cstr(ht, "cat"));
+    printf("dog: %s\n", *ht_search_cstr(ht, "dog"));
+    printf("snake: %s\n", *ht_search_cstr(ht, "snake"));
+    printf("man: %s\n", *ht_search_cstr(ht, "man"));
 
     printf("--- capacity: %zu ---\n", ht->capacity);
     printf("--- count: %zu ---\n", ht->count);
@@ -63,7 +64,7 @@ int main()
                     val[2] = j;
                     val[3] = i;
                     val[4] = '\0';
-                    char* val2 = ht_search_cstr(ht, key);
+                    char* val2 = *ht_search_cstr(ht, key);
                     if (strcmp(val, val2) == 0) tr_val++;
                 }
             }

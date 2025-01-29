@@ -5,8 +5,8 @@
 
 struct vector { int x; int y; };
 
-#define ht_insert_vec_int(ht, key, value) ht_insert_generic(ht, struct vector, key, int, value)
-#define ht_search_vec_int(ht, key) ht_search_generic(ht, struct vector, key, int)
+#define ht_insert_vec_int(ht, key, value) ht_insert_generic_key(ht, struct vector, key, int, value)
+#define ht_search_vec_int(ht, key) ht_search_generic_key(ht, struct vector, key, int)
 
 int main()
 {
