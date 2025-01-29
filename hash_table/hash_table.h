@@ -26,6 +26,8 @@ void  ht_insert(hash_table* ht, const char* key, void* value, int value_size);
 void* ht_search(hash_table* ht, const char* key);
 void  ht_delete(hash_table* ht, const char* key);
 
+char* ht_to_char(void* data, int data_size);
+
 #ifdef HT_IMPLEMENTATION
 #include <stddef.h>
 
@@ -42,11 +44,29 @@ void  ht_delete(hash_table* ht, const char* key);
 void ht_resize_up(hash_table* ht);
 void ht_resize_down(hash_table* ht);
 
+char* ht_to_char(void* data, int data_size)
+{
+    if (!data || data_size <= 0) {
+        return NULL; // Handle edge cases
+    }
+
+    char* cstr = (char*)malloc(data_size + 1);
+    if (!cstr) {
+        return NULL;
+    }
+
+    memcpy(cstr, data, data_size);
+    cstr[data_size] = '\0';
+
+    return cstr;
+}
+
 //
 // Hash formula:
 //      h_b(<a_0, a_1, ..., a_(n-1)>) = (SUM_{j=0 to n-1} (a_j * b^j)) mod p
 //
-size_t ht_hash(const char* s, const int a, const int m) {
+size_t ht_hash(const char* s, const int a, const int m)
+{
     unsigned long hash = 0;
     unsigned long a_pow = 1;  // a^0 = 1
     size_t len_s = strlen(s);
@@ -70,7 +90,8 @@ size_t ht_hash(const char* s, const int a, const int m) {
 #define HT_PRIME_1 31
 #define HT_PRIME_2 37
 
-size_t ht_get_hash(const char* s, const size_t num_buckets, const size_t attempt) {
+size_t ht_get_hash(const char* s, const size_t num_buckets, const size_t attempt)
+{
     size_t hash_a = ht_hash(s, HT_PRIME_1, num_buckets);
     size_t hash_b = ht_hash(s, HT_PRIME_2, num_buckets - 2); // m' = num_buckets - 2
     hash_b = (num_buckets - 1) - hash_b;  // Ensure non-zero secondary hash
@@ -78,7 +99,8 @@ size_t ht_get_hash(const char* s, const size_t num_buckets, const size_t attempt
 }
 
 
-ht_item* ht_new_item(const char* k, void* v, int value_size) {
+ht_item* ht_new_item(const char* k, void* v, int value_size)
+{
     ht_item* i = malloc(sizeof(ht_item));
     if (!i) {
         perror("Failed to allocate memory for ht_item");
@@ -181,7 +203,8 @@ void* ht_search(hash_table* ht, const char* key)
     return NULL;
 }
 
-void ht_delete(hash_table* ht, const char* key) {
+void ht_delete(hash_table* ht, const char* key)
+{
     int index = ht_get_hash(key, ht->capacity, 0);
     ht_item* item = ht->items[index];
     int i = 1;
