@@ -2,13 +2,11 @@
 
 #include <stddef.h>
 
-#ifndef DEFINE_ITEM
 typedef struct {
     char* key;
     void* value;
     int value_size;
 } ht_item;
-#endif // DEFINE_ITEM
 
 typedef struct {
     size_t capacity;
