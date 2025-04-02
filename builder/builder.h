@@ -152,7 +152,25 @@ void builder_build(Builder* builder)
             exit(EXIT_FAILURE);
         }
 
-        if (!obj_exists || obj_stat.st_mtime < src_stat.st_mtime) {
+        bool needs_recompile = !obj_exists || obj_stat.st_mtime < src_stat.st_mtime;
+
+        // Check if any dependency (header file) has changed
+        for (int j = 0; j < builder->object_files.items[i].dependencies.count; j++) {
+            char header_file[256];
+            snprintf(header_file, sizeof(header_file), "%.*s",
+                     sv_fmt(builder->object_files.items[i].dependencies.items[j]));
+
+            struct stat header_stat;
+            if (stat(header_file, &header_stat) == 0) {
+                if (!obj_exists || obj_stat.st_mtime < header_stat.st_mtime) {
+                    printf("[INFO] Header file '%s' modified. Recompiling '%s'\n", header_file, src_file);
+                    needs_recompile = true;
+                    break;
+                }
+            }
+        }
+
+        if (needs_recompile) {
             printf("[INFO] Compiling '%s' -> '%s'\n", src_file, object_file);
             char command[256];
             snprintf(command, sizeof(command), "gcc -c -o %s %s", object_file, src_file);
@@ -170,7 +188,7 @@ void builder_build(Builder* builder)
     // Only relink if at least one object file was updated
     if (needs_relink) {
         string_builder command = sb_init(NULL);
-        sb_add_f(&command, "gcc -o %s/%.*s", builder->output_dir, sv_fmt(builder->executable));
+        sb_add_f(&command, "gcc -o %.*s", sv_fmt(builder->executable));
 
         for (int i = 0; i < builder->object_files.count; i++) {
             sb_add_f(&command, " %s/%.*s", builder->output_dir, sv_fmt(builder->object_files.items[i].obj_file));
