@@ -2,7 +2,7 @@
 
 #include <stdbool.h>
 #ifndef STRING_IMPLEMENTATION
-	#define STRING_IMPLEMENTATION
+    #define STRING_IMPLEMENTATION
 #endif
 #include "../dynamic_array/string.h"
 

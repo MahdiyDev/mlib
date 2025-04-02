@@ -7,12 +7,12 @@ int main(int argc, char** argv)
 
     builder_add_executable(&builder, "main.out");
     builder_add_source_file(&builder, "source/main.c");
-	builder_build(&builder);
+    builder_build(&builder);
     builder_free(&builder);
 
     builder_add_executable(&builder, "print.out");
     builder_add_source_file(&builder, "source/print.c");
-	builder_build(&builder);
+    builder_build(&builder);
     builder_free(&builder);
 
     return 0;

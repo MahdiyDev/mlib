@@ -40,13 +40,13 @@ int main(int argc, char** argv)
             list_insert_after(list, list->head, (ListItem) { .value = 47 });
         }
     }
-	print_list(list);
+    print_list(list);
 
-	list_remove(list, 2);
-	
-	print_list(list);
+    list_remove(list, 2);
+    
+    print_list(list);
 
-	free_list(list);
+    free_list(list);
 
     return 0;
 }

@@ -7,12 +7,12 @@
 
 void print_hello(Task *task, resolve_func res, reject_func rej)
 {
-	srand(time(NULL));
-	int r = rand();
-	if (r % 2 == 0) {
-		rej(task, "Random number is not even");
-		return;
-	}
+    srand(time(NULL));
+    int r = rand();
+    if (r % 2 == 0) {
+        rej(task, "Random number is not even");
+        return;
+    }
     res(task, "Hello, World!");
 }
 
@@ -23,12 +23,12 @@ int main(int argc, char** argv)
 
     printf("Some thing to do...\n");
 
-	TaskResponse hello_response = await(hello_message_task);
+    TaskResponse hello_response = await(hello_message_task);
 
-	if (hello_response.reject != NULL) {
-		printf("Async Error Message: %s\n", (char*)hello_response.reject);
-		return 1;
-	}
+    if (hello_response.reject != NULL) {
+        printf("Async Error Message: %s\n", (char*)hello_response.reject);
+        return 1;
+    }
 
     printf("Awaited Message: %s\n", (char*)hello_response.resolve);
 

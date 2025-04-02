@@ -90,14 +90,14 @@ string_view sv_from_cstr(const char* cstr)
 
 string_view sv_split_cstr(string_view *sv, char* spliter)
 {
-	size_t len = strlen(spliter);
-	string_view result = sv_split_c(sv, spliter[len - 1]);
+    size_t len = strlen(spliter);
+    string_view result = sv_split_c(sv, spliter[len - 1]);
 
-	for (int i = len - 1; i >= 0; i--) {
-		result = sv_split_c(&result, spliter[i]);
-	}
+    for (int i = len - 1; i >= 0; i--) {
+        result = sv_split_c(&result, spliter[i]);
+    }
 
-	return result;
+    return result;
 }
 
 string_view sv_split_c(string_view *sv, char spliter)
@@ -122,21 +122,21 @@ string_view sv_split_c(string_view *sv, char spliter)
 
 string_view sv_split_mul_cstr(string_view *sv, char* spliter, int n)
 {
-	string_view result;
-	for (int i = 0; i < n; i++) {
-		result = sv_split_cstr(sv, spliter);
-	}
-	return result;
+    string_view result;
+    for (int i = 0; i < n; i++) {
+        result = sv_split_cstr(sv, spliter);
+    }
+    return result;
 }
 
 string_view sv_split_mul_c(string_view *sv, char spliter, int n)
 {
-	string_view result;
-	for (int i = 0; i < n; i++) {
-		result = sv_split_c(sv, spliter);
-		result = sv_split_c(&result, spliter);
-	}
-	return result;
+    string_view result;
+    for (int i = 0; i < n; i++) {
+        result = sv_split_c(sv, spliter);
+        result = sv_split_c(&result, spliter);
+    }
+    return result;
 }
 
 bool sv_equal(string_view a, string_view b)
@@ -150,21 +150,21 @@ bool sv_equal(string_view a, string_view b)
 
 bool sv_equal_c(string_view a, const char b)
 {
-	if (a.count <= 0) return false;
-	return a.data[0] == b;
+    if (a.count <= 0) return false;
+    return a.data[0] == b;
 }
 
 bool sv_equal_cstr(string_view a, const char* b)
 {
-	return sv_equal(a, sv_from_cstr(b));
+    return sv_equal(a, sv_from_cstr(b));
 }
 
 bool sv_start_with(string_view sv, const char* cstr)
 {
-	size_t cstr_count = strlen(cstr);
-	if (sv.count < cstr_count) return false;
+    size_t cstr_count = strlen(cstr);
+    if (sv.count < cstr_count) return false;
 
-	return memcmp(sv.data, cstr, cstr_count) == 0;
+    return memcmp(sv.data, cstr, cstr_count) == 0;
 }
 
 bool sv_end_with(string_view sv, const char *cstr)
@@ -180,24 +180,24 @@ bool sv_end_with(string_view sv, const char *cstr)
 
 bool sv_isdigit(const char c)
 {
-	return c >= '0' && c <= '9';
+    return c >= '0' && c <= '9';
 }
 
 size_t sv_to_digit(string_view sv)
 {
-	size_t value = 0;
-	int n;
-	for (int i = 0; i < sv.count; i++) {
-		if (isdigit(sv.data[i]) == 0) break;
-		n = sv.data[i] - '0';
-		if (n > 9) return value;
-		if (i == 0) {
-			value = value + n;
-		} else {
-			value = value * 10 + n;
-		}
-	}
-	return value;
+    size_t value = 0;
+    int n;
+    for (int i = 0; i < sv.count; i++) {
+        if (isdigit(sv.data[i]) == 0) break;
+        n = sv.data[i] - '0';
+        if (n > 9) return value;
+        if (i == 0) {
+            value = value + n;
+        } else {
+            value = value * 10 + n;
+        }
+    }
+    return value;
 }
 
 string_view sv_from_digit(size_t n) {
@@ -210,7 +210,7 @@ string_view sv_from_digit(size_t n) {
         n /= 10;
     } while (n > 0);
 
-	string_view sv = { &buffer[i], 20 - i };
+    string_view sv = { &buffer[i], 20 - i };
     return sv;
 }
 
@@ -251,24 +251,24 @@ bool sv_in(string_view sv, const char** arr, int count)
 
 bool sv_in_sv(string_view a, string_view b)
 {
-	if (a.count < b.count) return false;
-	for (int i = 0; i < a.count; i++) {
-		if (sv_equal(sv_from_parts(a.data + i, b.count), b)) return true;
-	}
-	return false;
+    if (a.count < b.count) return false;
+    for (int i = 0; i < a.count; i++) {
+        if (sv_equal(sv_from_parts(a.data + i, b.count), b)) return true;
+    }
+    return false;
 }
 
 bool sv_in_cstr(string_view a, const char* cstr)
 {
-	return sv_in_sv(a, sv_from_cstr(cstr));
+    return sv_in_sv(a, sv_from_cstr(cstr));
 }
 
 bool sv_in_c(string_view a, const char c)
 {
-	for (int i = 0; i < a.count; i++) {
-		if (a.data[i] == c) return true;
-	}
-	return false;
+    for (int i = 0; i < a.count; i++) {
+        if (a.data[i] == c) return true;
+    }
+    return false;
 }
 
 string_view sb_to_sv(string_builder* sb)
@@ -313,7 +313,7 @@ void sb_delete_range_cstr(string_builder* sb, int start_index, int end_index)
 
 void sb_clear(string_builder* sb)
 {
-	da_clear(sb);
+    da_clear(sb);
 }
 
 void sb_add_c(string_builder* sb, const char c)
@@ -346,8 +346,8 @@ void sb_add_f(string_builder* sb, const char *format, ...)
     vsnprintf(temp, n + 1, format, args);
     va_end(args);
 
-	sb_add_cstr(sb, temp);
-	free(temp);
+    sb_add_cstr(sb, temp);
+    free(temp);
 }
 
 // UTILS

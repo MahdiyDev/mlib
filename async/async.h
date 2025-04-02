@@ -10,10 +10,10 @@
 #include "async.h"
 
 #ifndef TASK_COUNT
-	#define TASK_COUNT 64
+    #define TASK_COUNT 64
 #endif
 #ifndef ASYNC
-	#define ASYNC
+    #define ASYNC
 #endif // ASYNC
 
 typedef struct Task Task;

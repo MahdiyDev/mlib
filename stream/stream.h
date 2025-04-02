@@ -7,13 +7,13 @@
 #include <string.h>
 
 #ifndef STREAM_MALLOC
-	#define STREAM_MALLOC malloc
+    #define STREAM_MALLOC malloc
 #endif
 #ifndef STREAM_REALLOC
-	#define STREAM_REALLOC realloc
+    #define STREAM_REALLOC realloc
 #endif
 #ifndef STREAM_ASSERT
-	#define STREAM_ASSERT assert
+    #define STREAM_ASSERT assert
 #endif
 
 #define DefineStream \

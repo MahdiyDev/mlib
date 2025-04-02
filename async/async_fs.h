@@ -3,24 +3,28 @@
 #include "../dynamic_array/dynamic_array.h"
 
 #ifndef ASYNC_IMPLEMENTATION
-	#define ASYNC_IMPLEMENTATION
+    #define ASYNC_IMPLEMENTATION
 #endif // ASYNC_IMPLEMENTATION
 #include "async.h"
 
 #include <stdio.h>
 
 #ifndef ASYNC_FS
-	#define ASYNC_FS
+    #define ASYNC_FS
 #endif // ASYNC_FS
 
 typedef struct FsTextDa {
     FILE* file;
-    DefineDa(char);
+    size_t capacity;
+    size_t count;
+    char* items;
 } FsTextDa;
 
 typedef struct FsDataDa {
     FILE* file;
-    DefineDa(unsigned char);
+    size_t capacity;
+    size_t count;
+    unsigned char* items;
 } FsDataDa;
 
 ASYNC_FS Task* async_fs_init(AsyncState* state, task_update update, const char* file_name, const char* mode, int priority);
@@ -149,7 +153,7 @@ void async_write_file_text_update(Task* task)
     bytes_writen = fputc(resolve->items[i], resolve->file);
     i++;
 
-    if (bytes_writen == EOF || i >= resolve->length) {
+    if (bytes_writen == EOF || i >= resolve->count) {
         finish_task(task);
         return;
     }
@@ -163,7 +167,7 @@ void async_write_file_data_update(Task* task)
     bytes_writen = fwrite(&resolve->items[i], sizeof(unsigned char), 1, resolve->file);
     i++;
 
-    if (bytes_writen == 0 || i >= resolve->length) {
+    if (bytes_writen == 0 || i >= resolve->count) {
         finish_task(task);
         return;
     }

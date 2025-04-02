@@ -5,19 +5,19 @@
 #include <string.h>
 
 #ifndef DA_ASSERT
-	#define DA_ASSERT assert
+    #define DA_ASSERT assert
 #endif
 #ifndef DA_MALLOC
-	#define DA_MALLOC malloc
+    #define DA_MALLOC malloc
 #endif
 #ifndef DA_CALLOC
-	#define DA_CALLOC calloc
+    #define DA_CALLOC calloc
 #endif
 #ifndef DA_REALLOC
-	#define DA_REALLOC realloc
+    #define DA_REALLOC realloc
 #endif
 #ifndef DA_FREE
-	#define DA_FREE free
+    #define DA_FREE free
 #endif
 
 #define arr_count(arr) (sizeof(arr) / sizeof(typeof(arr[0])))
