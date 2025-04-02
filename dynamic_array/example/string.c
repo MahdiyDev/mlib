@@ -9,20 +9,20 @@ int main()
 
     printf("%s\n", sv.data);
 
-    string_builder* sb = sb_init("String builder:\n");
+    string_builder sb = sb_init("String builder:\n");
 
-    sb_add_cstr(sb, "    ");
-    sb_add_cstr(sb, "capacity: ");
-    sb_add_f(sb, "%d\n", sb->capacity);
-    sb_add_cstr(sb, "    ");
-    sb_add_cstr(sb, "count: ");
-    sb_add_f(sb, "%d\n", sb->count);
+    sb_add_cstr(&sb, "    ");
+    sb_add_cstr(&sb, "capacity: ");
+    sb_add_f(&sb, "%d\n", sb.capacity);
+    sb_add_cstr(&sb, "    ");
+    sb_add_cstr(&sb, "count: ");
+    sb_add_f(&sb, "%d\n", sb.count);
 
-    sv = sb_to_sv(sb);
+    sv = sb_to_sv(&sb);
 
     printf("%s\n", sv.data);
 
-    sb_free(sb);
+    sb_free(&sb);
 
     return 0;
 }

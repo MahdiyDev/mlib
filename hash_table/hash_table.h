@@ -43,7 +43,7 @@ void ht_to_char(char* cstr, void* data, int data_size);
     ht_to_char(_key, &_vk, sizeof(_vk)); \
     (value_type*)ht_search(ht, _key); \
 })
-#define ht_delete_generic_key(ht, key_type, key) { \
+#define ht_delete_generic_key(ht, key_type, key) do { \
     key_type _vk = key; \
     char _key[sizeof(key_type)]; \
     ht_to_char(_key, &_vk, sizeof(_vk)); \

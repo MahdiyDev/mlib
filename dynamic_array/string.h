@@ -1,8 +1,8 @@
 #pragma once
 
-#include "dynamic_array.h"
 #include <ctype.h>
 #include <stdbool.h>
+#include <stdio.h>
 
 typedef struct {
     char* items;
@@ -34,7 +34,7 @@ bool sv_equal_cstr(string_view a, const char* b);
 bool sv_start_with(string_view sv, const char* cstr);
 bool sv_end_with(string_view sv, const char *cstr);
 
-bool sv_isnumeric(string_view sv);
+bool sv_isdigit(const char sv);
 size_t sv_to_digit(string_view sv);
 string_view sv_from_digit(size_t n);
 
@@ -48,7 +48,7 @@ bool sv_in_cstr(string_view a, const char* cstr);
 bool sv_in_c(string_view a, const char c);
 #define sv_in_carr(sv, arr) sv_in(sv, arr, arr_count(arr))
 
-string_builder* sb_init(const char* cstr);
+string_builder sb_init(const char* cstr);
 void sb_free(string_builder* sb);
 
 void sb_add(string_builder* sb, string_view sv);
@@ -65,10 +65,15 @@ void sb_add_f(string_builder* sb, const char *format, ...);
 
 void sb_clear(string_builder* sb);
 
+// UTILS
+bool sb_read_file(string_builder* sb, const char* file_path);
+bool sb_read_file_from_fp(string_builder* sb, FILE* fp);
+
 #ifdef STRING_IMPLEMENTATION
+#include <string.h>
 #include <stdarg.h>
 #include <ctype.h>
-#include <stdio.h>
+#include "dynamic_array.h"
 
 string_view sv_from_parts(const char* data, size_t count)
 {
@@ -173,9 +178,9 @@ bool sv_end_with(string_view sv, const char *cstr)
     return false;
 }
 
-bool sv_isnumeric(string_view sv)
+bool sv_isdigit(const char c)
 {
-	return isdigit(sv.data[0]) != 0;
+	return c >= '0' && c <= '9';
 }
 
 size_t sv_to_digit(string_view sv)
@@ -271,12 +276,12 @@ string_view sb_to_sv(string_builder* sb)
     return sv_from_parts((sb)->items, (sb)->count);
 }
 
-string_builder* sb_init(const char* cstr)
+string_builder sb_init(const char* cstr)
 {
-    string_builder* sb;
-    da_init(sb);
+    string_builder sb = {0};
+    da_init(&sb);
     if (cstr != NULL) {
-        sb_add_cstr(sb, cstr);
+        sb_add_cstr(&sb, cstr);
     }
     return sb;
 }
@@ -343,6 +348,32 @@ void sb_add_f(string_builder* sb, const char *format, ...)
 
 	sb_add_cstr(sb, temp);
 	free(temp);
+}
+
+// UTILS
+bool sb_read_file(string_builder* sb, const char* file_path)
+{
+    FILE *file = fopen(file_path, "rb");
+    if (file == NULL) return false;
+
+    bool result = sb_read_file_from_fp(sb, file);
+    if (!result) fclose(file);
+
+    return result;
+}
+
+bool sb_read_file_from_fp(string_builder* sb, FILE* fp)
+{
+    int ch;
+    while ((ch = fgetc(fp)) != EOF) {
+        sb_add_c(sb, ch);
+    }
+
+    if (ferror(fp)) {
+        return false;
+    }
+
+    return true;
 }
 
 #endif // STRING_IMPLEMENTATION
