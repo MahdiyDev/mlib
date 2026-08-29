@@ -348,7 +348,7 @@ void sb_add_f(string_builder* sb, const char* format, ...)
     va_start(args, format);
     int n = vsnprintf(NULL, 0, format, args);
     va_end(args);
-    DA_ASSERT(n >= 0 && "vsnprintf failed");
+    VEC_ASSERT(n >= 0 && "vsnprintf failed");
 
     size_t start = sb->count;
     string_builder_reserve(sb, sb->count + (size_t)n + 1);

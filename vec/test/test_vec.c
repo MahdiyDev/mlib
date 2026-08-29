@@ -41,7 +41,7 @@ TEST(init_and_init_with_capacity)
     IntVec a = {0};
     IntVec_init(&a);
     CHECK(a.count == 0);
-    CHECK(a.capacity == (size_t)DA_INIT_CAP);
+    CHECK(a.capacity == (size_t)VEC_INIT_CAP);
     IntVec_free(&a);
 
     IntVec b = {0};

@@ -25,17 +25,17 @@
 #include <stdlib.h>
 #include <string.h>
 
-#ifndef DA_ASSERT
-    #define DA_ASSERT assert
+#ifndef VEC_ASSERT
+    #define VEC_ASSERT assert
 #endif
-#ifndef DA_REALLOC
-    #define DA_REALLOC realloc
+#ifndef VEC_REALLOC
+    #define VEC_REALLOC realloc
 #endif
-#ifndef DA_FREE
-    #define DA_FREE free
+#ifndef VEC_FREE
+    #define VEC_FREE free
 #endif
-#ifndef DA_INIT_CAP
-    #define DA_INIT_CAP 4
+#ifndef VEC_INIT_CAP
+    #define VEC_INIT_CAP 4
 #endif
 
 #define DEFINE_VEC(T, Name) \
@@ -51,12 +51,12 @@
         if (want <= v->capacity) { \
             return; \
         } \
-        size_t cap = v->capacity ? v->capacity : (size_t)DA_INIT_CAP; \
+        size_t cap = v->capacity ? v->capacity : (size_t)VEC_INIT_CAP; \
         while (cap < want) { \
             cap *= 2; \
         } \
-        v->items = (T*)DA_REALLOC(v->items, cap * sizeof(T)); \
-        DA_ASSERT(v->items != NULL && "Failed to allocate memory"); \
+        v->items = (T*)VEC_REALLOC(v->items, cap * sizeof(T)); \
+        VEC_ASSERT(v->items != NULL && "Failed to allocate memory"); \
         v->capacity = cap; \
     } \
  \
@@ -72,7 +72,7 @@
  \
     static inline void Name##_init(Name* v) \
     { \
-        Name##_init_with_capacity(v, (size_t)DA_INIT_CAP); \
+        Name##_init_with_capacity(v, (size_t)VEC_INIT_CAP); \
     } \
  \
     static inline void Name##_free(Name* v) \
@@ -80,7 +80,7 @@
         if (v == NULL) { \
             return; \
         } \
-        DA_FREE(v->items); \
+        VEC_FREE(v->items); \
         v->items = NULL; \
         v->count = 0; \
         v->capacity = 0; \
@@ -88,7 +88,7 @@
  \
     static inline T* Name##_get(Name* v, size_t index) \
     { \
-        DA_ASSERT(index < v->count && "index out of range"); \
+        VEC_ASSERT(index < v->count && "index out of range"); \
         return &v->items[index]; \
     } \
  \
@@ -130,7 +130,7 @@
     /* Remove one element, shifting the tail left. */ \
     static inline void Name##_delete(Name* v, size_t index) \
     { \
-        DA_ASSERT(index < v->count && "index out of range"); \
+        VEC_ASSERT(index < v->count && "index out of range"); \
         memmove(v->items + index, v->items + index + 1, \
                 (v->count - index - 1) * sizeof(T)); \
         v->count--; \
@@ -139,7 +139,7 @@
     /* Remove the half-open range [start, end), shifting the tail left. */ \
     static inline void Name##_delete_range(Name* v, size_t start, size_t end) \
     { \
-        DA_ASSERT(start <= end && end <= v->count && "invalid range"); \
+        VEC_ASSERT(start <= end && end <= v->count && "invalid range"); \
         size_t n = end - start; \
         if (n == 0) { \
             return; \

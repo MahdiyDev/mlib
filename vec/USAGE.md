@@ -34,11 +34,11 @@ The generated struct is always `T* items; size_t count; size_t capacity;`.
 
 | Function                                             | Notes                                         |
 | --------------------------------------------------- | --------------------------------------------- |
-| `void Name_init(Name* v)`                            | capacity = `DA_INIT_CAP`                       |
+| `void Name_init(Name* v)`                            | capacity = `VEC_INIT_CAP`                      |
 | `void Name_init_with_capacity(Name* v, size_t n)`    | `n == 0` leaves it empty / unallocated         |
 | `void Name_reserve(Name* v, size_t want)`            | grows to `>= want`; never shrinks              |
 | `void Name_free(Name* v)`                            | resets fields; `NULL` and double-free are safe |
-| `T*   Name_get(Name* v, size_t i)`                   | bounds-checked with `DA_ASSERT`                |
+| `T*   Name_get(Name* v, size_t i)`                   | bounds-checked with `VEC_ASSERT`               |
 | `void Name_append(Name* v, T item)`                  |                                               |
 | `void Name_append_many(Name* v, const T* p, size_t n)` | `n == 0` is a no-op                          |
 | `void Name_prepend(Name* v, T item)`                 |                                               |
@@ -52,10 +52,10 @@ The generated struct is always `T* items; size_t count; size_t capacity;`.
 Define before including (defaults shown):
 
 ```c
-#define DA_ASSERT   assert
-#define DA_REALLOC  realloc
-#define DA_FREE     free
-#define DA_INIT_CAP 4
+#define VEC_ASSERT   assert
+#define VEC_REALLOC  realloc
+#define VEC_FREE     free
+#define VEC_INIT_CAP 4
 #include "vec.h"
 ```
 
