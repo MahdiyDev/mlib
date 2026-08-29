@@ -83,3 +83,22 @@ IntStream_for_each(
 Full API (plus opt-in `DEFINE_STREAM_RANGE` / cross-type `DEFINE_STREAM_MAP`):
 [stream/USAGE.md](stream/USAGE.md).
 Runnable example: [stream/example/](stream/example/) (`cd stream && make examples`).
+
+## hashmap
+
+Typed open-addressing hash map — linear probing with backward-shift deletion (no
+tombstones), power-of-two capacity. `DEFINE_HASHMAP(K, V, Name, hash, eq)` plus
+ready-made `DEFINE_HASHMAP_STR` (owned `const char*` keys) and
+`DEFINE_HASHMAP_INT`. Generates `put` / `get` / `contains` / `remove` /
+`get_or_put` / `reserve` / `clear` / `free` and callback-free iteration.
+
+```c
+DEFINE_HASHMAP_STR(int, Counts);
+Counts m = {0};
+(*Counts_get_or_put(&m, "hits", 0))++;
+hashmap_foreach(Counts, it, &m) printf("%s=%d\n", it.key, *it.value);
+Counts_free(&m);
+```
+
+Full API: [hashmap/USAGE.md](hashmap/USAGE.md).
+Runnable example: [hashmap/example/](hashmap/example/) (`cd hashmap && make examples`).
