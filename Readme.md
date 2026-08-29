@@ -63,3 +63,23 @@ IntList_free(&l);
 
 Full API: [list/USAGE.md](list/USAGE.md).
 Runnable example: [list/example/](list/example/) (`cd list && make examples`).
+
+## stream
+
+Lazy, pull-based streams (Java Stream / iterator style). `DEFINE_STREAM(T, Name)`
+generates a stream type plus `static inline` sources (`from_array`, `from_fn`),
+lazy ops (`map`, `filter`, `take`, `skip`, `peek`) and terminals (`for_each`,
+`reduce`, `count`, `any`/`all`, `find`, `collect`). Nothing runs until a terminal
+op, so sources can be infinite.
+
+```c
+DEFINE_STREAM(int, IntStream);
+int a[] = { 1, 2, 3, 4, 5, 6 };
+IntStream_for_each(
+    IntStream_map(IntStream_filter(IntStream_from_array(a, 6), is_even), square),
+    print_i);                               // 4 16 36
+```
+
+Full API (plus opt-in `DEFINE_STREAM_RANGE` / cross-type `DEFINE_STREAM_MAP`):
+[stream/USAGE.md](stream/USAGE.md).
+Runnable example: [stream/example/](stream/example/) (`cd stream && make examples`).
