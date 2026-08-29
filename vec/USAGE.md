@@ -12,7 +12,7 @@ DEFINE_VEC(int, IntVec);   // note the trailing ';'
 
 int main(void)
 {
-    IntVec v = {0};        // {0} is already a valid empty vec; init is optional
+    IntVec v = {0};        // a zeroed struct is a valid empty vec
     IntVec_append(&v, 42);
 
     int xs[] = { 1, 2, 3 };
@@ -28,15 +28,15 @@ int main(void)
 }
 ```
 
-The generated struct is always `T* items; size_t count; size_t capacity;`.
+The generated struct is always `T* items; size_t count; size_t capacity;`, so a
+zeroed struct (`= {0}`) is a valid empty vec — there is no `init`. To pre-size
+one, `Name_reserve(&v, n)` straight into the zeroed struct.
 
 ## Generated API (for `DEFINE_VEC(T, Name)`)
 
 | Function                                             | Notes                                         |
 | --------------------------------------------------- | --------------------------------------------- |
-| `void Name_init(Name* v)`                            | capacity = `VEC_INIT_CAP`                      |
-| `void Name_init_with_capacity(Name* v, size_t n)`    | `n == 0` leaves it empty / unallocated         |
-| `void Name_reserve(Name* v, size_t want)`            | grows to `>= want`; never shrinks              |
+| `void Name_reserve(Name* v, size_t want)`            | grows to `>= want` (geometric); never shrinks  |
 | `void Name_free(Name* v)`                            | resets fields; `NULL` and double-free are safe |
 | `T*   Name_get(Name* v, size_t i)`                   | bounds-checked with `VEC_ASSERT`               |
 | `void Name_append(Name* v, T item)`                  |                                               |

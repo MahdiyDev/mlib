@@ -9,13 +9,14 @@
 //
 //     DEFINE_VEC(int, IntVec);
 //
-//     IntVec v = {0};
-//     IntVec_init(&v);
+//     IntVec v = {0};                   // a zeroed struct is a valid empty vec
 //     IntVec_append(&v, 42);
 //     int xs[] = { 1, 2, 3 };
 //     IntVec_append_many(&v, xs, 3);
 //     for (size_t i = 0; i < v.count; i++) printf("%d\n", v.items[i]);
 //     IntVec_free(&v);
+//
+// To pre-size a vec, reserve into the zeroed struct: IntVec_reserve(&v, 128).
 //
 // The generated struct always has the fields { T* items; size_t count; size_t capacity; }
 // so it stays layout compatible with the rest of mlib (e.g. string.h's string_builder).
@@ -58,21 +59,6 @@
         v->items = (T*)VEC_REALLOC(v->items, cap * sizeof(T)); \
         VEC_ASSERT(v->items != NULL && "Failed to allocate memory"); \
         v->capacity = cap; \
-    } \
- \
-    static inline void Name##_init_with_capacity(Name* v, size_t cap) \
-    { \
-        v->items = NULL; \
-        v->count = 0; \
-        v->capacity = 0; \
-        if (cap > 0) { \
-            Name##_reserve(v, cap); \
-        } \
-    } \
- \
-    static inline void Name##_init(Name* v) \
-    { \
-        Name##_init_with_capacity(v, (size_t)VEC_INIT_CAP); \
     } \
  \
     static inline void Name##_free(Name* v) \

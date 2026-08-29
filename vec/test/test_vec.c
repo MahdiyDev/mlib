@@ -36,26 +36,17 @@ TEST(zero_initialized_is_a_valid_empty_vec)
     IntVec_free(&v);
 }
 
-TEST(init_and_init_with_capacity)
+TEST(reserve_presizes_a_zeroed_vec)
 {
-    IntVec a = {0};
-    IntVec_init(&a);
-    CHECK(a.count == 0);
-    CHECK(a.capacity == (size_t)VEC_INIT_CAP);
-    IntVec_free(&a);
-
     IntVec b = {0};
-    IntVec_init_with_capacity(&b, 100);
+    IntVec_reserve(&b, 100);
     CHECK(b.count == 0);
     CHECK(b.capacity >= 100);
     CHECK(b.items != NULL);
-    IntVec_free(&b);
 
-    IntVec c = {0};
-    IntVec_init_with_capacity(&c, 0);
-    CHECK(c.capacity == 0);
-    CHECK(c.items == NULL);
-    IntVec_free(&c);
+    IntVec_append(&b, 1); // no reallocation until 100 elements
+    CHECK(b.capacity >= 100);
+    IntVec_free(&b);
 }
 
 TEST(append_grows_geometrically_and_keeps_order)
@@ -267,7 +258,7 @@ TEST(interleaved_operations)
 int main(void)
 {
     RUN(zero_initialized_is_a_valid_empty_vec);
-    RUN(init_and_init_with_capacity);
+    RUN(reserve_presizes_a_zeroed_vec);
     RUN(append_grows_geometrically_and_keeps_order);
     RUN(reserve_never_shrinks);
     RUN(append_many);
