@@ -37,10 +37,20 @@ int main(void)
 {
     int data[] = { 1, 2, 3, 4, 5, 6, 7, 8 };
 
+    // nested style: reads inside-out
     printf("even^3:      ");
     IntStream_for_each(
         IntStream_map(IntStream_filter(IntStream_from_array(data, 8), is_even), cube),
         show_int);                                  // 8 64 216 512
+    printf("\n");
+
+    // same pipeline, reassignment style: reads top-to-bottom. Each step consumes
+    // the old `s` and rebinds it; the terminal frees the whole chain.
+    printf("even^3 again: ");
+    IntStream s2 = IntStream_from_array(data, 8);
+    s2 = IntStream_filter(s2, is_even);
+    s2 = IntStream_map(s2, cube);
+    IntStream_for_each(s2, show_int);                // 8 64 216 512
     printf("\n");
 
     int sum = IntStream_reduce(IntStream_from_range(1, 101, 1), 0, add);

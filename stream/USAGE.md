@@ -24,6 +24,17 @@ int main(void)
 }
 ```
 
+The nested form reads inside-out. The same pipeline in **reassignment style**
+reads top-to-bottom — each step consumes the old `s` and rebinds it, and the
+terminal frees the whole chain:
+
+```c
+IntStream s = IntStream_from_array(a, 6);
+s = IntStream_filter(s, is_even);
+s = IntStream_map(s, square);
+IntStream_for_each(s, print_i);   // 4 16 36
+```
+
 ## "Move" semantics
 
 Every combinator and terminal **consumes** the stream handed to it. Once you
