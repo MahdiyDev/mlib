@@ -43,3 +43,23 @@ string_view first = sv_split_c(&rest, ',');   // "a"; rest becomes "b,c"
 
 Full API: [string/USAGE.md](string/USAGE.md).
 Runnable examples: [string/example/](string/example/) (`cd string && make examples`).
+
+## list
+
+Typed doubly-linked list. `DEFINE_LIST(T, Name)` stamps out a node type, a
+`{ head, tail, count }` container, and `static inline` `Name_*` functions —
+O(1) insert/remove at either end or at a known node, forward and backward
+iteration, no `typeof`.
+
+```c
+DEFINE_LIST(int, IntList);
+IntList l = {0};
+IntList_push_back(&l, 1);
+IntList_node* n = IntList_push_front(&l, 0);
+IntList_insert_after(&l, n, 9);          // 0, 9, 1
+list_foreach(IntList, it, &l) printf("%d ", it->value);
+IntList_free(&l);
+```
+
+Full API: [list/USAGE.md](list/USAGE.md).
+Runnable example: [list/example/](list/example/) (`cd list && make examples`).
