@@ -4,6 +4,14 @@ Header-only C11 building blocks. Each module lives in its own folder with a
 `USAGE.md`, runnable programs in `example/`, a `Makefile`, and a `test/` suite.
 The shared test harness is [`test.h`](test.h) at the repository root.
 
+```
+make            # run every module's test suite
+make examples   # build and run every example
+make vec        # just one module   (also: string list stream hashmap async)
+```
+
+On Windows use `mingw32-make`.
+
 ## vec
 
 Typed dynamic array, "C++ template" style. `DEFINE_VEC(T, Name)` stamps out a
