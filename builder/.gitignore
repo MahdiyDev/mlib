@@ -1,8 +1,0 @@
-x64
-.vs
-build
-.clangd
-*.out
-*.o
-*.exe
-3rdparty/glfw/lib/*
