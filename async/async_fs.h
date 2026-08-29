@@ -1,175 +1,129 @@
 #pragma once
 
-#include "../dynamic_array/dynamic_array.h"
-
-#ifndef ASYNC_IMPLEMENTATION
-    #define ASYNC_IMPLEMENTATION
-#endif // ASYNC_IMPLEMENTATION
-#include "async.h"
+// File I/O as cooperative tasks: each poll moves one chunk, yielding between
+// chunks so a large file does not stall the loop. Binary mode ("rb" / "wb").
+// Built on async.h + string.h (compile with -I<repo> -I<repo>/vec).
 
 #include <stdio.h>
 
-#ifndef ASYNC_FS
-    #define ASYNC_FS
-#endif // ASYNC_FS
+#include "async.h"
+#include "../string/string.h"
 
-typedef struct FsTextDa {
+#ifndef ASYNC_FS_CHUNK
+    #define ASYNC_FS_CHUNK 4096
+#endif
+
+typedef struct {
     FILE* file;
-    size_t capacity;
-    size_t count;
-    char* items;
-} FsTextDa;
+    string_builder data;          // read: the result; write: a copy of the source
+    size_t pos;                   // write cursor
+} AsyncFile;
 
-typedef struct FsDataDa {
-    FILE* file;
-    size_t capacity;
-    size_t count;
-    unsigned char* items;
-} FsDataDa;
-
-ASYNC_FS Task* async_fs_init(AsyncState* state, task_update update, const char* file_name, const char* mode, int priority);
-ASYNC_FS void async_fs_close(Task* task);
-
-ASYNC_FS Task* async_read_file_text(AsyncState* state, const char* file_name);
-ASYNC_FS Task* async_read_file_data(AsyncState* state, const char* file_name);
-ASYNC_FS Task* async_write_file_text(AsyncState* state, const char* file_name, const void* data, size_t size);
-ASYNC_FS Task* async_write_file_data(AsyncState* state, const char* file_name, const void* data, size_t size);
-ASYNC_FS Task* async_read_file_text_priority(AsyncState* state, const char* file_name, int priority);
-ASYNC_FS Task* async_read_file_data_priority(AsyncState* state, const char* file_name, int priority);
-ASYNC_FS Task* async_write_file_text_priority(AsyncState* state, const char* file_name, const void* data, size_t size, int priority);
-ASYNC_FS Task* async_write_file_data_priority(AsyncState* state, const char* file_name, const void* data, size_t size, int priority);
-
-ASYNC_FS void async_read_file_text_update(Task* task);
-ASYNC_FS void async_read_file_data_update(Task* task);
-ASYNC_FS void async_write_file_text_update(Task* task);
-ASYNC_FS void async_write_file_data_update(Task* task);
-
-#ifdef ASYNC_FS_IMPLEMENTATION
-
-Task* async_fs_init(AsyncState* state, task_update update, const char* file_name, const char* mode, int priority)
+static inline CoStatus async_fs_read_poll_(Task* t)
 {
-    Task* task = async_func_priority(state, NULL, priority);
-    FsTextDa* resolve = (FsTextDa*)get_task_resolve(task);
-    da_init(resolve);
-    resolve->file = fopen(file_name, mode);
-    if (resolve->file == NULL)
+    AsyncFile* f = (AsyncFile*)t->ctx;
+    char buf[ASYNC_FS_CHUNK];
+    co_begin(&t->co);
+    for (;;) {
+        {
+            size_t n = fread(buf, 1, sizeof(buf), f->file);
+            if (n > 0) {
+                string_builder_append_many(&f->data, buf, n);
+            }
+            if (n < sizeof(buf)) {
+                break; // short read: EOF or error
+            }
+        }
+        co_yield(&t->co);
+    }
+    if (ferror(f->file)) {
+        co_fail(&t->co, "read error");
+    }
+    co_return(&t->co, &f->data);
+    co_end(&t->co);
+}
+
+static inline CoStatus async_fs_write_poll_(Task* t)
+{
+    AsyncFile* f = (AsyncFile*)t->ctx;
+    co_begin(&t->co);
+    while (f->pos < f->data.count) {
+        {
+            size_t chunk = f->data.count - f->pos;
+            if (chunk > ASYNC_FS_CHUNK) {
+                chunk = ASYNC_FS_CHUNK;
+            }
+            size_t w = fwrite(f->data.items + f->pos, 1, chunk, f->file);
+            f->pos += w;
+            if (w < chunk) {
+                co_fail(&t->co, "write error");
+            }
+        }
+        co_yield(&t->co);
+    }
+    co_return(&t->co, NULL);
+    co_end(&t->co);
+}
+
+static inline AsyncFile* async_file_new_(const char* path, const char* mode)
+{
+    FILE* fp = fopen(path, mode);
+    if (fp == NULL) {
         return NULL;
-    set_resolve(task, resolve);
-    set_task_update(state, task, update);
-    return task;
+    }
+    AsyncFile* f = (AsyncFile*)ASYNC_MALLOC(sizeof(AsyncFile));
+    ASYNC_ASSERT(f != NULL && "async_fs: allocation failed");
+    f->file = fp;
+    f->data = (string_builder){ 0 };
+    f->pos = 0;
+    return f;
 }
 
-Task* async_read_file_text_priority(AsyncState* state, const char* file_name, int priority)
+// Read `path` into a string_builder. task_result() is a string_builder*.
+// Returns NULL if the file could not be opened.
+static inline Task* async_read_file_prio(Sched* s, const char* path, int prio)
 {
-    return async_fs_init(state, async_read_file_text_update, file_name, "r", priority);
-}
-
-Task* async_read_file_text(AsyncState* state, const char* file_name)
-{
-    return async_read_file_text_priority(state, file_name, get_priority_start(state));
-}
-
-Task* async_read_file_data_priority(AsyncState* state, const char* file_name, int priority)
-{
-    return async_fs_init(state, async_read_file_data_update, file_name, "rb", priority);
-}
-
-Task* async_read_file_data(AsyncState* state, const char* file_name)
-{
-    return async_read_file_data_priority(state, file_name, get_priority_start(state));
-}
-
-Task* async_write_file_text_priority(AsyncState* state, const char* file_name, const void* data, size_t size, int priority)
-{
-    Task* task = async_fs_init(state, async_write_file_text_update, file_name, "w", priority);
-    if (task == NULL)
+    AsyncFile* f = async_file_new_(path, "rb");
+    if (f == NULL) {
         return NULL;
-    FsTextDa* resolve = (FsTextDa*)get_task_resolve(task);
-    da_append_many(resolve, data, size);
-    return task;
+    }
+    return sched_spawn_prio(s, async_fs_read_poll_, f, prio);
 }
 
-Task* async_write_file_text(AsyncState* state, const char* file_name, const void* data, size_t size)
+static inline Task* async_read_file(Sched* s, const char* path)
 {
-    return async_write_file_text_priority(state, file_name, data, size, get_priority_start(state));
+    return async_read_file_prio(s, path, 0);
 }
 
-Task* async_write_file_data_priority(AsyncState* state, const char* file_name, const void* data, size_t size, int priority)
+// Write `len` bytes of `data` to `path`. `data` is copied, so it need not
+// outlive the task. Returns NULL if the file could not be opened.
+static inline Task* async_write_file_prio(Sched* s, const char* path, const void* data, size_t len, int prio)
 {
-    Task* task = async_fs_init(state, async_write_file_data_update, file_name, "wb", priority);
-    if (task == NULL)
+    AsyncFile* f = async_file_new_(path, "wb");
+    if (f == NULL) {
         return NULL;
-    FsDataDa* resolve = (FsDataDa*)get_task_resolve(task);
-    da_append_many(resolve, data, size);
-    return task;
+    }
+    string_builder_append_many(&f->data, data, len);
+    return sched_spawn_prio(s, async_fs_write_poll_, f, prio);
 }
 
-Task* async_write_file_data(AsyncState* state, const char* file_name, const void* data, size_t size)
+static inline Task* async_write_file(Sched* s, const char* path, const void* data, size_t len)
 {
-    return async_write_file_data_priority(state, file_name, data, size, get_priority_start(state));
+    return async_write_file_prio(s, path, data, len, 0);
 }
 
-void async_fs_close(Task* task)
+// Close the file and free the task's AsyncFile context. Call once the task is
+// done and its result has been read. The Task struct is still freed by sched_free.
+static inline void async_file_close(Task* t)
 {
-    FsTextDa* resolve = (FsTextDa*)get_task_resolve(task);
-    fclose(resolve->file);
-    da_free(resolve);
-}
-
-void async_read_file_text_update(Task* task)
-{
-    char ch;
-    FsTextDa* resolve = (FsTextDa*)get_task_resolve(task);
-
-    if (feof(resolve->file)) {
-        finish_task(task);
+    AsyncFile* f = (AsyncFile*)t->ctx;
+    if (f == NULL) {
         return;
     }
-
-    ch = fgetc(resolve->file);
-    da_append(resolve, ch);
-}
-
-void async_read_file_data_update(Task* task)
-{
-    unsigned char buffer;
-    size_t bytes_read;
-    FsDataDa* resolve = (FsDataDa*)get_task_resolve(task);
-    bytes_read = fread(&buffer, sizeof(unsigned char), 1, resolve->file);
-
-    if (bytes_read == 0) {
-        finish_task(task);
-        return;
+    if (f->file != NULL) {
+        fclose(f->file);
     }
-
-    da_append(resolve, buffer);
+    string_builder_free(&f->data);
+    ASYNC_FREE(f);
+    t->ctx = NULL;
 }
-
-void async_write_file_text_update(Task* task)
-{
-    static size_t i = 0;
-    int bytes_writen;
-    FsDataDa* resolve = (FsDataDa*)get_task_resolve(task);
-    bytes_writen = fputc(resolve->items[i], resolve->file);
-    i++;
-
-    if (bytes_writen == EOF || i >= resolve->count) {
-        finish_task(task);
-        return;
-    }
-}
-
-void async_write_file_data_update(Task* task)
-{
-    static size_t i = 0;
-    size_t bytes_writen;
-    FsDataDa* resolve = (FsDataDa*)get_task_resolve(task);
-    bytes_writen = fwrite(&resolve->items[i], sizeof(unsigned char), 1, resolve->file);
-    i++;
-
-    if (bytes_writen == 0 || i >= resolve->count) {
-        finish_task(task);
-        return;
-    }
-}
-#endif // ASYNC_FS_IMPLEMENTATION

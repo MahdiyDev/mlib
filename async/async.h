@@ -1,244 +1,214 @@
 #pragma once
 
+// Cooperative scheduler + stackless coroutines. Single-threaded, header-only,
+// plain C11. A "task" is a poll function over a context struct; the coroutine
+// macros let you write it as linear code that suspends and resumes.
+//
+//     typedef struct { int i; } Greet;
+//
+//     static CoStatus greet(Task* t)
+//     {
+//         Greet* g = (Greet*)t->ctx;
+//         co_begin(&t->co);
+//         for (g->i = 0; g->i < 3; g->i++)
+//             co_yield(&t->co);              // one step per scheduler tick
+//         co_return(&t->co, "hello");
+//         co_end(&t->co);
+//     }
+//
+//     Sched s = {0};                          // {0} is a valid empty scheduler
+//     Greet g = {0};
+//     Task* t = sched_spawn(&s, greet, &g);
+//     char* msg = (char*)sched_block_on(&s, t);   // runs the loop until t finishes
+//     sched_free(&s);
+//
+// Coroutine rules (stackless -- the usual protothread caveats):
+//   * co_yield / co_await may only appear in the task body, between co_begin and
+//     co_end -- never inside a helper function or a nested `switch`.
+//   * at most one co_yield/co_await per source line.
+//   * a local declared before a yield is indeterminate after a resume -- keep
+//     anything that must survive a suspend in the context struct.
+//
+// Task lifetime: the scheduler owns Task structs until sched_free() (or
+// sched_gc(), which reaps finished tasks -- don't call it while a co_await still
+// targets a finished task). The context struct is always caller-owned.
+
 #include <assert.h>
 #include <stdbool.h>
 #include <stddef.h>
-#include <stdio.h>
 #include <stdlib.h>
 
-#include "../list/list.h"
-#include "async.h"
-
-#ifndef TASK_COUNT
-    #define TASK_COUNT 64
+#ifndef ASYNC_MALLOC
+    #define ASYNC_MALLOC malloc
 #endif
-#ifndef ASYNC
-    #define ASYNC
-#endif // ASYNC
+#ifndef ASYNC_FREE
+    #define ASYNC_FREE free
+#endif
+#ifndef ASYNC_ASSERT
+    #define ASYNC_ASSERT assert
+#endif
 
-typedef struct Task Task;
+typedef enum {
+    CO_PENDING = 0,
+    CO_DONE
+} CoStatus;
+
 typedef struct {
-    void* resolve;
-    void* reject;
-} TaskResponse;
-typedef struct AsyncState AsyncState;
-
-typedef void (*resolve_func)(Task* task, void*);
-typedef void (*reject_func)(Task* task, void*);
-typedef void (*task_call_back)(Task* task, resolve_func resolve, reject_func reject);
-typedef void (*task_update)(Task* task);
-typedef void (*task_init)(Task* task);
-
-ASYNC AsyncState* async_init();
-ASYNC AsyncState* async_init_priority(int priority_start, int priority_end);
-ASYNC void async_close(AsyncState* state);
-ASYNC void async_update(AsyncState* state);
-ASYNC Task* async_func(AsyncState* state, task_call_back call_back);
-ASYNC Task* async_func_priority(AsyncState* state, task_call_back call_back, int priority);
-ASYNC int get_priority_start(AsyncState* state);
-ASYNC int get_priority_end(AsyncState* state);
-ASYNC bool async_is_finished(AsyncState* state);
-
-ASYNC void set_task_update(AsyncState* state, Task* task, task_update update);
-ASYNC void finish_task(Task* task);
-ASYNC void wait_task(Task* task);
-ASYNC void set_reject(Task* task, void* reject);
-ASYNC void set_resolve(Task* task, void* resolve);
-ASYNC void* get_task_resolve(Task* task);
-ASYNC void* get_task_reject(Task* task);
-ASYNC TaskResponse await(Task* task);
-
-#ifdef ASYNC_IMPLEMENTATION
-
-typedef enum Status {
-    ASYNC_INIT = 0,
-    ASYNC_WAITING,
-    ASYNC_FINISHED,
-} Status;
+    int pc;         // resume point (0 = start, -1 = finished)
+    void* result;   // set by co_return
+    void* error;    // set by co_fail
+} Co;
 
 typedef struct Task {
-    void* resolve;
-    void* reject;
-    Status status;
-    task_call_back call_back;
-    task_update update;
-    // task_init init;
-    Task* next;
+    struct Task* next;
+    CoStatus (*poll)(struct Task* self);
+    void* ctx;
+    Co co;
+    int prio;
+    bool done;
 } Task;
 
-typedef struct TaskList {
-    size_t length;
-    Task* head;
-} TaskList;
+typedef struct {
+    Task* head;     // kept sorted: higher prio first, then spawn order
+    size_t count;
+} Sched;
 
-typedef struct Tasks {
-    int index_priority;
-    TaskList* items;
-} Tasks;
+// --- coroutine control flow (operate on a Co*) --------------------------------
 
-typedef struct AsyncState {
-    Tasks* tasks;
-    int task_count;
-    int priority_start;
-    int priority_end;
+#define co_begin(co) \
+    switch ((co)->pc) { \
+    case 0:
 
-    bool is_finished;
-} AsyncState;
+#define co_yield(co) \
+    do { \
+        (co)->pc = __LINE__; \
+        return CO_PENDING; \
+        case __LINE__:; \
+    } while (0)
 
-void set_resolve(Task* task, void* resolve)
-{
-    task->resolve = resolve;
-}
-
-void set_reject(Task* task, void* reject)
-{
-    task->reject = reject;
-}
-
-void* get_task_resolve(Task* task)
-{
-    return task->resolve;
-}
-
-void* get_task_reject(Task* task)
-{
-    return task->reject;
-}
-
-void set_task_update(AsyncState* state, Task* task, task_update update)
-{
-    task->status = ASYNC_WAITING;
-    task->update = update;
-    state->is_finished = false;
-}
-
-TaskResponse await(Task* task)
-{
-    assert(task != NULL && "Task must be not NULL");
-    if (task->call_back != NULL) {
-        task->call_back(task, set_resolve, set_reject);
-    }
-    return (TaskResponse) {
-        .resolve = task->resolve,
-        .reject = task->reject,
-    };
-}
-
-AsyncState* async_init_priority(int priority_start, int priority_end)
-{
-    assert(priority_start <= priority_end);
-    AsyncState* state = (AsyncState*)malloc(sizeof(AsyncState));
-
-    state->priority_start = priority_start;
-    state->priority_end = priority_end;
-
-    int priority_diff = (priority_end - priority_start) + 1;
-
-    state->tasks = (Tasks*)malloc(priority_diff * sizeof(Tasks));
-    state->task_count = priority_diff;
-
-    for (int i = 0, j = priority_start; i < priority_diff; i++) {
-        state->tasks[i].index_priority = j;
-        create_list(state->tasks[i].items);
-        j++;
+// suspend until another task is finished
+#define co_await(co, task) \
+    while (!(task)->done) { \
+        co_yield(co); \
     }
 
-    return state;
-}
-
-int get_priority_start(AsyncState* state)
-{
-    return state->priority_start;
-}
-
-int get_priority_end(AsyncState* state)
-{
-    return state->priority_end;
-}
-
-AsyncState* async_init()
-{
-    return async_init_priority(0, 0);
-}
-
-void async_close(AsyncState* state)
-{
-    for (int i = 0; i < state->task_count; i++) {
-        free_list(state->tasks[i].items);
+// suspend until `cond` becomes true (re-checked once per tick)
+#define co_await_until(co, cond) \
+    while (!(cond)) { \
+        co_yield(co); \
     }
-    free(state->tasks);
-    free(state);
+
+#define co_return(co, value) \
+    do { \
+        (co)->result = (void*)(value); \
+        (co)->pc = -1; \
+        return CO_DONE; \
+    } while (0)
+
+#define co_fail(co, err) \
+    do { \
+        (co)->error = (void*)(err); \
+        (co)->pc = -1; \
+        return CO_DONE; \
+    } while (0)
+
+#define co_end(co) \
+    } \
+    (co)->pc = -1; \
+    return CO_DONE
+
+// --- scheduler ---------------------------------------------------------------
+
+static inline Task* sched_spawn_prio(Sched* s, CoStatus (*poll)(Task*), void* ctx, int prio)
+{
+    Task* t = (Task*)ASYNC_MALLOC(sizeof(Task));
+    ASYNC_ASSERT(t != NULL && "sched: task allocation failed");
+    t->next = NULL;
+    t->poll = poll;
+    t->ctx = ctx;
+    t->co = (Co){ 0 };
+    t->prio = prio;
+    t->done = false;
+
+    Task** link = &s->head;
+    while (*link != NULL && (*link)->prio >= prio) {
+        link = &(*link)->next;
+    }
+    t->next = *link;
+    *link = t;
+    s->count++;
+    return t;
 }
 
-bool async_is_finished(AsyncState* state)
+static inline Task* sched_spawn(Sched* s, CoStatus (*poll)(Task*), void* ctx)
 {
-    state->is_finished = true;
+    return sched_spawn_prio(s, poll, ctx, 0);
+}
 
-    for (int i = 0; i < state->task_count; i++) {
-        Task* task = state->tasks[i].items->head;
-        for (int j = 0; j < state->tasks[i].items->length; j++) {
-            if (task == NULL) {
-                break;
-            }
-            if (task->status == ASYNC_WAITING) {
-                state->is_finished = false;
-            }
-            task = task->next;
+// Run every unfinished task once, highest priority first.
+// Returns true while at least one task is still pending.
+static inline bool sched_tick(Sched* s)
+{
+    bool pending = false;
+    for (Task* t = s->head; t != NULL; t = t->next) {
+        if (t->done) {
+            continue;
+        }
+        if (t->poll(t) == CO_DONE) {
+            t->done = true;
+        } else {
+            pending = true;
         }
     }
-
-    return state->is_finished;
+    return pending;
 }
 
-void async_update(AsyncState* state)
+// Tick until no task is pending.
+static inline void sched_run(Sched* s)
 {
-    for (int i = (state->task_count - 1); i >= 0; i--) {
-        Task* task = state->tasks[i].items->head;
-        for (int j = 0; j < state->tasks[i].items->length; j++) {
-            if (task == NULL) {
-                break;
-            }
-            if (task->update != NULL && task->status == ASYNC_WAITING) {
-                task->update(task);
-            }
-            task = task->next;
+    while (sched_tick(s)) {
+    }
+}
+
+// Tick until `t` is finished; returns its result.
+static inline void* sched_block_on(Sched* s, Task* t)
+{
+    while (!t->done) {
+        sched_tick(s);
+    }
+    return t->co.result;
+}
+
+static inline bool task_done(const Task* t) { return t->done; }
+static inline void* task_result(const Task* t) { return t->co.result; }
+static inline void* task_error(const Task* t) { return t->co.error; }
+static inline void* task_ctx(const Task* t) { return t->ctx; }
+
+// Free finished Task structs. Unsafe while a co_await still refers to one.
+static inline void sched_gc(Sched* s)
+{
+    Task** link = &s->head;
+    while (*link != NULL) {
+        Task* t = *link;
+        if (t->done) {
+            *link = t->next;
+            ASYNC_FREE(t);
+            s->count--;
+        } else {
+            link = &t->next;
         }
     }
 }
 
-void finish_task(Task* task)
+// Free every Task struct. Context structs are not touched.
+static inline void sched_free(Sched* s)
 {
-    task->status = ASYNC_FINISHED;
+    Task* t = s->head;
+    while (t != NULL) {
+        Task* next = t->next;
+        ASYNC_FREE(t);
+        t = next;
+    }
+    s->head = NULL;
+    s->count = 0;
 }
-
-void wait_task(Task* task)
-{
-    task->status = ASYNC_WAITING;
-}
-
-Task* async_func_priority(AsyncState* state, task_call_back call_back, int priority)
-{
-    assert(state->priority_start <= priority && state->priority_end >= priority);
-    int priority_diff = (state->priority_end - state->priority_start);
-    int task_index = abs(state->priority_start - priority);
-
-    TaskList* current_task_list = state->tasks[task_index].items;
-
-    Task new_task = {
-        .call_back = call_back,
-        .status = ASYNC_INIT,
-        .resolve = NULL,
-        .reject = NULL,
-        .update = NULL,
-    };
-
-    list_push(current_task_list, new_task);
-
-    return current_task_list->head;
-}
-
-Task* async_func(AsyncState* state, task_call_back call_back)
-{
-    return async_func_priority(state, call_back, state->priority_start);
-}
-#endif // ASYNC_IMPLEMENTATION

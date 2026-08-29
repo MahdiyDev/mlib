@@ -102,3 +102,28 @@ Counts_free(&m);
 
 Full API: [hashmap/USAGE.md](hashmap/USAGE.md).
 Runnable example: [hashmap/example/](hashmap/example/) (`cd hashmap && make examples`).
+
+## async
+
+A single-threaded cooperative scheduler with stackless coroutines. A task is a
+poll function; `co_begin` / `co_yield` / `co_await` / `co_return` let you write it
+as linear code that suspends and resumes one scheduler tick at a time. Priorities,
+`sched_block_on` for a blocking wait, and `async_fs.h` for chunked file I/O.
+
+```c
+static CoStatus greet(Task* t) {
+    Greet* g = t->ctx;
+    co_begin(&t->co);
+    for (g->i = 0; g->i < 3; g->i++) co_yield(&t->co);
+    co_return(&t->co, "hello");
+    co_end(&t->co);
+}
+
+Sched s = {0};
+Task* t = sched_spawn(&s, greet, &g);
+char* msg = sched_block_on(&s, t);
+sched_free(&s);
+```
+
+Full API: [async/USAGE.md](async/USAGE.md).
+Runnable examples: [async/example/](async/example/) (`cd async && make examples`).

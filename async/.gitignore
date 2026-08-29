@@ -6,3 +6,4 @@ build
 *.o
 *.exe
 3rdparty/glfw/lib/*
+*.tmp
